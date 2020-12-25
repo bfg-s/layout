@@ -1,0 +1,35 @@
+{
+    "name": "bfg/layout",
+    "type": "bfg-script",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "bfg",
+            "email": "bfg.script@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0.0",
+        "bfg/dev": "^1.0.0"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Bfg\\Layout\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Bfg\\Layout\\ServiceProvider"
+            ],
+            "aliases": {
+                "Layout": "Bfg\\Layout\\Facade"
+            }
+        }
+    }
+}
