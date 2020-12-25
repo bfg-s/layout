@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Facade as FacadeIlluminate;
  * @package Bfg\Layout
  */
 class Facade extends FacadeIlluminate
-{/**
+{
+    /**
      * @return string
      */
     protected static function getFacadeAccessor()

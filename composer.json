@@ -1,5 +1,6 @@
 {
     "name": "bfg/layout",
+    "description": "A pattern for generating standard templates and providing a component transaction.",
     "type": "bfg-script",
     "license": "MIT",
     "authors": [
