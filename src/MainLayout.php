@@ -1,12 +1,12 @@
 <?php
 
-namespace Bfg\Layout\Core;
+namespace Bfg\Layout;
 
-use Bfg\Layout\MetaConfigs;
+use Bfg\Layout\Core\Tag;
 
 /**
  * Class Layout
- * @package Bfg\Layout\Core
+ * @package Bfg\Layout
  */
 abstract class MainLayout extends Tag {
 
