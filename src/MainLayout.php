@@ -2,8 +2,6 @@
 
 namespace Bfg\Layout;
 
-use Bfg\Layout\Core\Tag;
-
 /**
  * Class Layout
  * @package Bfg\Layout

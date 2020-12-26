@@ -1,7 +1,8 @@
 <?php
 
-namespace Bfg\Layout\Core;
+namespace Bfg\Layout;
 
+use Bfg\Layout\Core\TagCollect;
 use Illuminate\Contracts\Support\Renderable;
 
 /**
