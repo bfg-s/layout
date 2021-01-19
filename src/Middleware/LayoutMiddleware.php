@@ -2,9 +2,8 @@
 
 namespace Bfg\Layout\Middleware;
 
-use Bfg\Dev\EmbeddedCall;
 use Bfg\Layout\Controllers\CallController;
-use Bfg\Layout\Core\MainLayout;
+use Bfg\Layout\MainLayout;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -44,14 +43,19 @@ class LayoutMiddleware
 
         if ((!$ajax && $request->isMethod("get")) || $request->has('bfg')) {
 
-            if (!class_exists($layout)) {
+            if ($tc = $this->checkClass($layout)) {
+
+                $layout = $tc;
+            }
+
+            else if (!class_exists($layout)) {
 
                 $layout = "App\\Layouts\\" . ucfirst(Str::camel($layout)) . "Layout";
             }
 
             if (class_exists($layout)) {
 
-                static::$current = new $layout();
+                static::$current = app($layout);//new $layout();
 
                 /** @var \Illuminate\Http\Response $response */
                 $response = $next($request);
@@ -85,5 +89,15 @@ class LayoutMiddleware
         $response->header('X-CSRF-TOKEN', csrf_token());
 
         return $response;
+    }
+
+    /**
+     * Internal override for middleware children
+     * @param  string  $sign
+     * @return bool
+     */
+    protected function checkClass(string $sign)
+    {
+        return false;
     }
 }

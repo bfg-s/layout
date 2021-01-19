@@ -3,7 +3,7 @@
 namespace Bfg\Layout;
 
 /**
- * Class Layout
+ * Class MainLayout
  * @package Bfg\Layout
  */
 abstract class MainLayout extends Tag {
@@ -80,12 +80,11 @@ abstract class MainLayout extends Tag {
     protected $asset_driver = "asset";
 
     /**
-     * Layout constructor.
-     * @param  mixed  ...$params
+     * MainLayout constructor.
      */
-    public function __construct(...$params)
+    public function __construct()
     {
-        parent::__construct(null, $params);
+        parent::__construct(null, []);
         $this->head = $this->head($this->head_params);
         $this->body = $this->body($this->body_params);
         $this->head->title($this->title ?? config('app.name'));

@@ -6,11 +6,11 @@ if (! function_exists('tag')) {
     /**
      * @param  string  $tag
      * @param  mixed  ...$params
-     * @return \Bfg\Layout\Core\Tag
+     * @return \Bfg\Layout\Tag
      */
     function tag (string $tag, ...$params) {
 
-        return new \Bfg\Layout\Core\Tag($tag, ...$params);
+        return new \Bfg\Layout\Tag($tag, ...$params);
     }
 }
 
