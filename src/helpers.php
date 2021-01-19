@@ -78,6 +78,10 @@ if (! function_exists('__transform_blade_component')) {
             }
         }
 
+        if (isset($result['data-m'])) {
+            $result['data-m'] = implode(';', $result['data-m']);
+        }
+
         return ['schema' => $result, 'content' => $content];
     }
 }

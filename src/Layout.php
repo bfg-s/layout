@@ -36,7 +36,8 @@ class Layout
      */
     public function registerComponent(string $id, Component $instance)
     {
-        $num = isset($this->components[$id]) ? count($this->components[$id]) : 0;
+        //$num = isset($this->components[$id]) ? count($this->components[$id]) : 0;
+        $num = count($this->components);
 
         $this->components[$id][] = $instance;
 

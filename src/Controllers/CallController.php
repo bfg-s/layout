@@ -2,8 +2,7 @@
 
 namespace Bfg\Layout\Controllers;
 
-use Bfg\Dev\EmbeddedCall;
-use Bfg\Layout\Core\MainLayout;
+use Bfg\Layout\MainLayout;
 use Bfg\Layout\Middleware\LayoutMiddleware;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
@@ -23,6 +22,7 @@ class CallController
      */
     public function index(Request $request, MainLayout $content)
     {
+        $content->render();
         $result = [
             '$schema' => collect($content->get_page_data())->map(function ($item) {
                 return [
@@ -44,9 +44,11 @@ class CallController
                     $result = $result->render();
                 }
 
-                $result[$var] = $return;
+                $result['$response'] = $return;
             }
         }
+
+        //dump(LayoutMiddleware::$responces);
 
         return $result;
     }

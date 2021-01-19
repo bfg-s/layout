@@ -135,7 +135,7 @@ abstract class Component extends BladeComponent {
         /**
          * Make component ID
          */
-        $id = $name . "@" . $num;
+        $id = $name . "\\" . $num;
 
         /**
          * Push on except bfg component methods
@@ -150,13 +150,18 @@ abstract class Component extends BladeComponent {
          */
         $this->inner();
 
-        /**
-         * Check on out call
-         */
-        if (request()->has($id)) {
+        if (request()->ajax()) {
 
-            LayoutMiddleware::$responces[$id] =
-                EmbeddedCall::make([$this, request()->get($id)]);
+            $rid = base64_encode($id);
+
+            /**
+             * Check on out call
+             */
+            if (request()->has($rid)) {
+
+                LayoutMiddleware::$responces[$id] =
+                    EmbeddedCall::make([$this, request()->get($rid)]);
+            }
         }
 
         /**
