@@ -75,6 +75,11 @@ abstract class MainLayout extends Tag {
     protected $page_data = [];
 
     /**
+     * @var string
+     */
+    protected $asset_driver = "asset";
+
+    /**
      * Layout constructor.
      * @param  mixed  ...$params
      */
@@ -201,7 +206,7 @@ abstract class MainLayout extends Tag {
 
         else if (is_string($data)) {
 
-            $url = strpos($data, "://") === false ? asset($data) : $data;
+            $url = strpos($data, "://") === false ? call_user_func($this->asset_driver, $data) : $data;
 
             $tag->attr(['href' => $url, 'rel' => 'stylesheet', 'type' => 'text/css']);
         }
@@ -224,7 +229,7 @@ abstract class MainLayout extends Tag {
 
         else if (is_string($data)) {
 
-            $url = strpos($data, "://") === false ? asset($data) : $data;
+            $url = strpos($data, "://") === false ? call_user_func($this->asset_driver, $data) : $data;
 
             $tag->attr(['src' => $url, 'type' => 'text/javascript']);
         }

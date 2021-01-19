@@ -2,18 +2,11 @@
 
 namespace Bfg\Layout;
 
-use Bfg\Dev\Commands\SpeedTestCommand;
 use Bfg\Layout\Core\RouteMixin;
-use Bfg\Layout\SpeedTest\ComponentNameGeneratorSpeenTest;
-use Bfg\Layout\SpeedTest\CreateDefaultLayoutSpeenTest;
-use Bfg\Layout\SpeedTest\TagCreateSpeenTest;
-use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Bfg\Layout\Middleware\LayoutMiddleware;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as ServiceProviderIlluminate;
-use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 /**
  * Class ServiceProvider
@@ -59,10 +52,6 @@ class ServiceProvider extends ServiceProviderIlluminate
         $this->registerRouteMiddleware();
 
         $this->commands($this->commands);
-
-        //SpeedTestCommand::toTest(ComponentNameGeneratorSpeenTest::class);
-        //SpeedTestCommand::toTest(TagCreateSpeenTest::class, 'tag_create');
-        //SpeedTestCommand::toTest(CreateDefaultLayoutSpeenTest::class, 'default_layout');
     }
 
     /**

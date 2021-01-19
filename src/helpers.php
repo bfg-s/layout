@@ -18,16 +18,21 @@ if (! function_exists('__transform_blade_component')) {
     /**
      * @param  array  $data
      * @param  string  $class
+     * @param  string  $id
+     * @param  bool  $has_parent
      * @return array
      */
-    function __transform_blade_component (array $data, string $class) {
+    function __transform_blade_component (array $data, string $class, string $id, bool $has_parent = false) {
+
+        $identify = 'data-e'.($has_parent ? "c" : "r");
 
         $result = [
-            'e' => null, // Element name
-            'a' => null, // Attributes
-            'c' => [],   // Contents
-            'v' => null, // Variables
-            'm' => [],   // Methods
+            $identify => null
+            //'e' => null, // Element name
+            //'a' => null, // Attributes
+            //'c' => [],   // Contents
+            //'v' => null, // Variables
+            //'m' => [],   // Methods
         ];
 
         $content = "";
@@ -42,7 +47,7 @@ if (! function_exists('__transform_blade_component')) {
             foreach ($data['__laravel_slots'] as $slot_key => $item) {
                 /** @var \Illuminate\Support\HtmlString $item */
                 if ($item) {
-                    $result['c'][$slot_key] = $item->toHtml();
+                    $result['data-c'][$slot_key] = $item->toHtml();
                 }
                 unset($data[$slot_key]);
             }
@@ -54,13 +59,20 @@ if (! function_exists('__transform_blade_component')) {
 
             if ($key === 'attributes') {
                 /** @var \Illuminate\View\ComponentAttributeBag $datum */
-                $result['a'] = $datum->getAttributes();
+                foreach ($datum->getAttributes() as $name => $attribute) {
+                    if ($name == 'class') { $result[$name] = $attribute;}
+                    else { $result['data-a'][$name] = $attribute; }
+                }
             } else if ($key === 'componentName') {
-                $result['e'] = $datum === null ? __generate_blade_component_name($class) : $datum;
+                $result[$identify] = $id;
             } else if ($datum instanceof \Illuminate\View\InvokableComponentVariable) {
-                $result['m'][] = $key;
+                $result['data-m'][] = $key;
             } else {
-                $result['v'][$key] = $datum;
+                if ($key == '_pn') {
+                    if (is_array($datum) && count($datum)) $result['data-v'][$key] = $datum;
+                } else {
+                    $result['data-v'][$key] = $datum;
+                }
             }
         }
 

@@ -155,16 +155,11 @@ abstract class Component extends BladeComponent {
         }
 
         /**
-         * Get class for default state
-         */
-        $class = isset($this->attributes['class']) ? $this->attributes['class'] : null;
-
-        /**
          * Make function trap for bfg templating
          * @param  array  $data
          * @return string
          */
-        return function (array $data) use ($class, $id) {
+        return function (array $data) use ($id) {
 
             /**
              * Return the parent to the current component.
@@ -174,40 +169,12 @@ abstract class Component extends BladeComponent {
             /**
              * Transform default component data to bfg templater
              */
-            $roles = __transform_blade_component($data, static::class);
-
-            /**
-             * Attribute list
-             */
-            $attributes = [];
-
-            /**
-             * Create to separate data from tags if a bfg layout is used.
-             */
-            if (LayoutMiddleware::$current) {
-                $attributes["data-schema".($this->parent ? "-child" : "")."-id"] = $id;
-                if (!request()->ajax()) {
-                    LayoutMiddleware::$current->addPageData($roles['schema']['e'], $roles['schema']['m']);
-                    $roles['schema']['m'] = [];
-                }
-                $roles['schema']['id'] = $id;
-                LayoutMiddleware::$current->addPageData($id, $roles['schema']);
-            } else {
-                $attributes["data-schema".($this->parent ? "-child" : "")] = base64_encode(json_encode($roles['schema']));
-            }
-
-            if (isset($roles['schema']['a']['class']) || $class) {
-
-                /**
-                 * Pass the class to the default node component, if it exists.
-                 */
-                $attributes['class'] = $roles['schema']['a']['class'] ?? $class;
-            }
+            $roles = __transform_blade_component($data, static::class, $id, !!$this->parent);
 
             /**
              * Return the component as a tag.
              */
-            return tag($this->element, $attributes, (string)$roles['content'])->render();
+            return tag($this->element, $roles['schema'], (string)$roles['content'])->render();
         };
     }
 
