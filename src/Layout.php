@@ -32,7 +32,7 @@ class Layout
      * Register component in glogal container
      * @param  string  $id
      * @param  Component  $instance
-     * @return string
+     * @return array
      */
     public function registerComponent(string $id, Component $instance)
     {
@@ -40,7 +40,8 @@ class Layout
 
         $this->components[$id][] = $instance;
 
-        return $id.'#'.$num;
+        //return $id.'#'.$num;
+        return [$id, $num];
     }
 
     /**

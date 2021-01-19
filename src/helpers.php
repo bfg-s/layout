@@ -19,10 +19,11 @@ if (! function_exists('__transform_blade_component')) {
      * @param  array  $data
      * @param  string  $class
      * @param  string  $id
+     * @param  int  $num
      * @param  bool  $has_parent
      * @return array
      */
-    function __transform_blade_component (array $data, string $class, string $id, bool $has_parent = false) {
+    function __transform_blade_component (array $data, string $class, string $id, int $num, bool $has_parent = false) {
 
         $identify = 'data-e'.($has_parent ? "c" : "r");
 
@@ -47,7 +48,8 @@ if (! function_exists('__transform_blade_component')) {
             foreach ($data['__laravel_slots'] as $slot_key => $item) {
                 /** @var \Illuminate\Support\HtmlString $item */
                 if ($item) {
-                    $result['data-c'][$slot_key] = $item->toHtml();
+                    //$result['data-c'][$slot_key] = $item->toHtml();
+                    $content .= tag('span', ['data-sf' => $num, 'data-s' => $slot_key])->appEnd($item->toHtml());
                 }
                 unset($data[$slot_key]);
             }

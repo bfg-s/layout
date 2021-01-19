@@ -66,7 +66,7 @@ class LayoutMiddleware
 
                 if (static::$current_action) {
 
-                    $controller = app()->make(CallController::class);
+                    $controller = app(CallController::class);
                     $content = $controller->index($request, $content);
                 }
 

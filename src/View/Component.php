@@ -128,9 +128,14 @@ abstract class Component extends BladeComponent {
     public function render()
     {
         /**
-         * Register component and get id
+         * Register component and get data
          */
-        $id = \Layout::registerComponent($this->componentName, $this);
+        list($name, $num) = \Layout::registerComponent($this->componentName, $this);
+
+        /**
+         * Make component ID
+         */
+        $id = $name . "@" . $num;
 
         /**
          * Push on except bfg component methods
@@ -159,7 +164,7 @@ abstract class Component extends BladeComponent {
          * @param  array  $data
          * @return string
          */
-        return function (array $data) use ($id) {
+        return function (array $data) use ($id, $num) {
 
             /**
              * Return the parent to the current component.
@@ -169,7 +174,7 @@ abstract class Component extends BladeComponent {
             /**
              * Transform default component data to bfg templater
              */
-            $roles = __transform_blade_component($data, static::class, $id, !!$this->parent);
+            $roles = __transform_blade_component($data, static::class, $id, $num, !!$this->parent);
 
             /**
              * Return the component as a tag.

@@ -47,6 +47,8 @@ class ServiceProvider extends ServiceProviderIlluminate
      */
     public function register()
     {
+        MetaConfigs::add('asset', asset('/'));
+
         Router::mixin(new RouteMixin);
 
         $this->registerRouteMiddleware();
