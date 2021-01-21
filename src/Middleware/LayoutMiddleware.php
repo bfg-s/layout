@@ -62,20 +62,29 @@ class LayoutMiddleware
 
                 $response->header('X-CSRF-TOKEN', csrf_token());
 
-                $content = static::$current->setContent($response->getContent());
+                $origin_content = $response->getContent();
+
+                if ($response->exception)  {
+
+                    return $response;
+                }
 
                 if (static::$current_action) {
 
                     $controller = app(CallController::class);
-                    $content = $controller->index($request, $content);
+
+                    $content = $controller->index();
                 }
 
                 if (!static::$current_action) {
 
-                    $content = $content->create_body_data()->create_body_scripts()->render();
+                    $content = static::$current->setContent($origin_content)
+                        ->create_body_scripts()->render();
                 }
 
-                return $response->setContent($content);
+                $response->setContent($content);
+
+                return $response;
             }
 
             else {

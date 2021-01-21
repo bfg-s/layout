@@ -2,6 +2,24 @@
 
 use Illuminate\View\Compilers\ComponentTagCompiler;
 
+if (! function_exists('respond')) {
+
+    /**
+     * @param  string|null  $command
+     * @param  mixed  ...$values
+     * @return \Bfg\Layout\Respond|\Illuminate\Contracts\Foundation\Application|mixed
+     */
+    function respond (string $command = null, ...$values) {
+
+        if ($command) {
+
+            return app(\Bfg\Layout\Respond::class)->put($command, ...$values);
+        }
+
+        return app(\Bfg\Layout\Respond::class);
+    }
+}
+
 if (! function_exists('tag')) {
     /**
      * @param  string  $tag

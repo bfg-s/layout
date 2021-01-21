@@ -2,8 +2,10 @@
 
 namespace Bfg\Layout\View;
 
+use Admin\Components\ServicePages\Login\Form;
 use Bfg\Dev\EmbeddedCall;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Str;
 use Illuminate\View\ComponentAttributeBag;
 use Bfg\Layout\Middleware\LayoutMiddleware;
 use Illuminate\Contracts\Support\Renderable;
@@ -150,6 +152,9 @@ abstract class Component extends BladeComponent {
          */
         $this->inner();
 
+        /**
+         * Call request if exists
+         */
         if (request()->ajax()) {
 
             $rid = base64_encode($id);
@@ -160,7 +165,12 @@ abstract class Component extends BladeComponent {
             if (request()->has($rid)) {
 
                 LayoutMiddleware::$responces[$id] =
-                    EmbeddedCall::make([$this, request()->get($rid)]);
+                    ['response' => EmbeddedCall::make(
+                        [$this, request()->get($rid)], [],
+                        function (\Throwable $throwable) {
+                            dd($throwable);
+                        }
+                    )];
             }
         }
 
@@ -180,6 +190,14 @@ abstract class Component extends BladeComponent {
              * Transform default component data to bfg templater
              */
             $roles = __transform_blade_component($data, static::class, $id, $num, !!$this->parent);
+
+            /**
+             * Write data variables for response
+             */
+            if (isset(LayoutMiddleware::$responces[$id]) && isset($roles['schema']['data-v'])) {
+
+                LayoutMiddleware::$responces[$id]['schema'] = $roles['schema']['data-v'];
+            }
 
             /**
              * Return the component as a tag.
@@ -222,6 +240,21 @@ abstract class Component extends BladeComponent {
     }
 
     /**
+     * Create a callable variable from the given method.
+     *
+     * Since we do not have a call through a standard type,
+     * we can remove the restriction of parameters,
+     * since we only determine the type from it.
+     *
+     * @param  \ReflectionMethod  $method
+     * @return mixed
+     */
+    protected function createVariableFromMethod(\ReflectionMethod $method)
+    {
+        return $this->createInvokableVariable($method->getName());
+    }
+
+    /**
      * Create component (used for api class)
      * @param  \Closure|array  $params
      * @param  \Closure|null  $callback
@@ -239,7 +272,6 @@ abstract class Component extends BladeComponent {
          * Make component instance
          */
         $component = app('view')->getContainer()->make(static::class, $params);
-        //$component = new static(...$params);
 
         /**
          * Start a component
@@ -254,8 +286,6 @@ abstract class Component extends BladeComponent {
         if (!$component->componentName) {
 
             $component->withName(__generate_blade_component_name(static::class));
-
-            //dd($component->componentName, __generate_blade_component_name(static::class));
         }
 
         /**

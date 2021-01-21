@@ -4,6 +4,7 @@ namespace Bfg\Layout\Controllers;
 
 use Bfg\Layout\MainLayout;
 use Bfg\Layout\Middleware\LayoutMiddleware;
+use Bfg\Layout\Respond;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
@@ -20,16 +21,9 @@ class CallController
      * @return mixed
      * @throws \Throwable
      */
-    public function index(Request $request, MainLayout $content)
+    public function index()
     {
-        $content->render();
-        $result = [
-            '$schema' => collect($content->get_page_data())->map(function ($item) {
-                return [
-                    'v' => $item['v']
-                ];
-            })
-        ];
+        $result = [];
 
         foreach (LayoutMiddleware::$responces as $var => $return) {
 
@@ -44,11 +38,19 @@ class CallController
                     $result = $result->render();
                 }
 
-                $result['$response'] = $return;
+                if (isset($return['response']) && $return['response'] !== null) {
+
+                    $result['$response'] = $return['response'];
+                }
+
+                if (isset($return['schema'])) {
+
+                    $result['$schema'] = $return['schema'];
+                }
             }
         }
 
-        //dump(LayoutMiddleware::$responces);
+        $result['$respond'] = app(Respond::class)->toArray();
 
         return $result;
     }

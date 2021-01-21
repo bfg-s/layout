@@ -49,6 +49,10 @@ class ServiceProvider extends ServiceProviderIlluminate
     {
         MetaConfigs::add('asset', asset('/'));
 
+        $this->app->singleton(Respond::class);
+
+        $this->app->alias(Respond::class, 'respond');
+
         Router::mixin(new RouteMixin);
 
         $this->registerRouteMiddleware();
