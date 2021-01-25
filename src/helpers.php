@@ -32,16 +32,38 @@ if (! function_exists('tag')) {
     }
 }
 
+if (! function_exists('bfgContentRequest')) {
+
+    /**
+     * @return bool
+     */
+    function bfgContentRequest () {
+
+        return request()->headers->get('BFG-CONTENT-REQUEST') == true;
+    }
+}
+
+if (! function_exists('bfgTemplateRequest')) {
+
+    /**
+     * @return bool
+     */
+    function bfgTemplateRequest () {
+
+        return request()->headers->get('BFG-TEMPLATE-REQUEST') == true;
+    }
+}
+
 if (! function_exists('__transform_blade_component')) {
     /**
      * @param  array  $data
      * @param  string  $class
      * @param  string  $id
-     * @param  int  $num
+     * @param  int|string  $num
      * @param  bool  $has_parent
      * @return array
      */
-    function __transform_blade_component (array $data, string $class, string $id, int $num, bool $has_parent = false) {
+    function __transform_blade_component (array $data, string $class, string $id, $num, bool $has_parent = false) {
 
         $identify = 'data-e'.($has_parent ? "c" : "r");
 

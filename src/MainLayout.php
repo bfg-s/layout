@@ -86,11 +86,18 @@ abstract class MainLayout extends Tag {
     protected $asset_driver = "asset";
 
     /**
+     * The ID of container
+     * @var string|null
+     */
+    protected $containerId = null;
+
+    /**
      * MainLayout constructor.
      */
     public function __construct()
     {
         parent::__construct(null, []);
+        if ($this->containerId) { MetaConfigs::add('container', $this->containerId); }
         $this->attr('lang', \App::getLocale());
         $this->head = $this->head($this->head_params);
         $this->body = $this->body($this->body_params);
@@ -100,7 +107,6 @@ abstract class MainLayout extends Tag {
         foreach ($this->styles as $style) { $this->set_style($style, $this->head); }
         if ($this->ui) { $this->set_style(asset("vendor/ui/ui.css"), $this->head); }
         foreach ($this->scripts as $script) { $this->set_script($script, $this->head); }
-        if ($this->ui) { $this->set_script(asset("vendor/ui/ui.js"), $this->head); }
         foreach ($this->metas as $meta) { $this->head->meta($meta); }
 
         foreach (MetaConfigs::get() as $name => $content) {
@@ -116,6 +122,11 @@ abstract class MainLayout extends Tag {
     {
         $this->body->appEnd($content);
 
+        if ($this->containerId) {
+
+            $this->body->attr('id', $this->containerId);
+        }
+
         return $this;
     }
 
@@ -124,9 +135,34 @@ abstract class MainLayout extends Tag {
      */
     public function create_body_scripts()
     {
-        foreach ($this->bscripts as $script) { $this->set_script($script, $this->body); }
+        $respond = app(Respond::class)->toArray();
+
+        if (count($respond)) {
+
+            $this->body->script(['data-bfg-call' => '', 'type' => 'json'])->appEnd(
+                json_encode($respond, JSON_UNESCAPED_UNICODE)
+            );
+        }
+
+        if ($this->ui) {
+
+            $this->set_script(asset("vendor/ui/ui.js"), $this->body);
+        }
+
+        foreach ($this->bscripts as $script) {
+
+            $this->set_script($script, $this->body);
+        }
 
         return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getContainerId()
+    {
+        return $this->containerId;
     }
 
     /**

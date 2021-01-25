@@ -2,6 +2,8 @@
 
 namespace Bfg\Layout;
 
+use Bfg\Layout\Controllers\ContentController;
+use Bfg\Layout\Middleware\LayoutMiddleware;
 use Bfg\Layout\View\Component;
 
 /**
@@ -11,7 +13,7 @@ use Bfg\Layout\View\Component;
 class Layout
 {
     /**
-     * @var Component[][]
+     * @var Component[]
      */
     protected $components = [];
 
@@ -19,6 +21,11 @@ class Layout
      * @var array
      */
     protected static array $tgs = [];
+
+    /**
+     * @var int
+     */
+    protected $layout_components = 0;
 
     /**
      * Layout constructor.
@@ -36,8 +43,14 @@ class Layout
      */
     public function registerComponent(string $id, Component $instance)
     {
-        //$num = isset($this->components[$id]) ? count($this->components[$id]) : 0;
-        $num = count($this->components);
+        if (ContentController::$content_end) {
+
+            $num = 'w' . $this->layout_components++;
+
+        } else {
+
+            $num = count($this->components);
+        }
 
         $this->components[$id][] = $instance;
 
@@ -75,5 +88,14 @@ class Layout
     public function tags()
     {
         return Layout::$tgs;
+    }
+
+    /**
+     * Get current layout
+     * @return MainLayout|null
+     */
+    public function current()
+    {
+        return LayoutMiddleware::$current;
     }
 }

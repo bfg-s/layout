@@ -4,6 +4,7 @@ namespace Bfg\Layout\View;
 
 use Admin\Components\ServicePages\Login\Form;
 use Bfg\Dev\EmbeddedCall;
+use Bfg\Layout\Controllers\ContentController;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Illuminate\View\ComponentAttributeBag;
@@ -29,6 +30,12 @@ abstract class Component extends BladeComponent {
      * @var Component
      */
     static $current;
+
+    /**
+     * Create component in slot by default
+     * @var Component
+     */
+    static protected $slotable;
 
     /**
      * Node name of component tag
@@ -104,7 +111,7 @@ abstract class Component extends BladeComponent {
          * Check on rendered and echo
          */
         echo $text instanceof Renderable ? $text->render() : (
-            $text instanceof \Closure ? $text() : (string)$text
+            $text instanceof \Closure ? $text($this) : (string)$text
         );
 
         return $this;
@@ -129,39 +136,27 @@ abstract class Component extends BladeComponent {
      */
     public function render()
     {
-        /**
-         * Register component and get data
-         */
+        /** Register component and get data */
         list($name, $num) = \Layout::registerComponent($this->componentName, $this);
 
-        /**
-         * Make component ID
-         */
+        /** Make component ID */
         $id = $name . "\\" . $num;
 
-        /**
-         * Push on except bfg component methods
-         */
+        /** Push on except bfg component methods */
         array_push(
             $this->except,
             'create', 'attrs', 'attr', 'text', 'slot', 'inner', 'toSlot', 'provoke'
         );
 
-        /**
-         * Calling an internal event for feeding content for the api class.
-         */
+        /** Calling an internal event for feeding content for the api class. */
         $this->inner();
 
-        /**
-         * Call request if exists
-         */
+        /** Call request if exists */
         if (request()->ajax()) {
 
             $rid = base64_encode($id);
 
-            /**
-             * Check on out call
-             */
+            /** Check on out call */
             if (request()->has($rid)) {
 
                 LayoutMiddleware::$responces[$id] =
@@ -181,27 +176,25 @@ abstract class Component extends BladeComponent {
          */
         return function (array $data) use ($id, $num) {
 
-            /**
-             * Return the parent to the current component.
-             */
+            /** Return the parent to the current component. */
             Component::$current = $this->tmp_current;
 
-            /**
-             * Transform default component data to bfg templater
-             */
+            /** Transform default component data to bfg templater */
             $roles = __transform_blade_component($data, static::class, $id, $num, !!$this->parent);
 
-            /**
-             * Write data variables for response
-             */
+            /** Write data variables for response */
             if (isset(LayoutMiddleware::$responces[$id]) && isset($roles['schema']['data-v'])) {
 
                 LayoutMiddleware::$responces[$id]['schema'] = $roles['schema']['data-v'];
             }
 
-            /**
-             * Return the component as a tag.
-             */
+            /** Add state fot content getter */
+            if (isset($roles['schema']['data-v'])) {
+
+                ContentController::toState($id, $roles['schema']['data-v']);
+            }
+
+            /** Return the component as a tag. */
             return tag($this->element, $roles['schema'], (string)$roles['content'])->render();
         };
     }
@@ -256,26 +249,49 @@ abstract class Component extends BladeComponent {
 
     /**
      * Create component (used for api class)
-     * @param  \Closure|array  $params
-     * @param  \Closure|null  $callback
+     * @param  array  $params
+     * @param  null  $callback
+     * @param  string|null  $slotable
      * @return  static|null
-     * @throws  \Illuminate\Contracts\Container\BindingResolutionException
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
-    public static function create($params = [], $callback = null)
+    public static function create($params = [], $callback = null, string $slotable = null)
     {
-        /**
-         * A trap for parameters
-         */
+        /** Slotable global require */
+        if ($slotable === null) $slotable = static::$slotable;
+
+        /** Slotable mode trap */
+        if ($slotable) {
+
+            /**
+             * Throw exception if don't have a parent
+             */
+            if (!Component::$current) {
+
+                throw new \Exception("You can send to the slot only when there is a parent component!");
+            }
+
+            /**
+             * Make a slot for parent with current component
+             */
+            Component::$current->slot($slotable, function () use ($params, $callback) {
+
+                /**
+                 * Create current component
+                 */
+                static::create($params, $callback, false);
+            });
+
+            return null;
+        }
+
+        /** A trap for parameters */
         if (!is_array($params)) { $callback = $params; $params = []; }
 
-        /**
-         * Make component instance
-         */
+        /** Make component instance */
         $component = app('view')->getContainer()->make(static::class, $params);
 
-        /**
-         * Start a component
-         */
+        /** Start a component */
         app('view')->startComponent($component->resolveView(), $component->data());
 
         /**
@@ -288,9 +304,7 @@ abstract class Component extends BladeComponent {
             $component->withName(__generate_blade_component_name(static::class));
         }
 
-        /**
-         * Apply inner callback for api class
-         */
+        /** Apply inner callback for api class */
         if ($callback) {
 
             if ($callback instanceof \Closure) {
@@ -303,9 +317,7 @@ abstract class Component extends BladeComponent {
             }
         }
 
-        /**
-         * If the component is called as a child, then immediately render it.
-         */
+        /** If the component is called as a child, then immediately render it. */
         if ($component->tmp_current) {
 
             echo $component;

@@ -3,8 +3,10 @@
 namespace Bfg\Layout\Middleware;
 
 use Bfg\Layout\Controllers\CallController;
+use Bfg\Layout\Controllers\ContentController;
 use Bfg\Layout\MainLayout;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -20,9 +22,9 @@ class LayoutMiddleware
     static $current;
 
     /**
-     * @var string
+     * @var bool
      */
-    static $current_action;
+    static $bfg_request = false;
 
     /**
      * @var array
@@ -41,7 +43,12 @@ class LayoutMiddleware
     {
         $ajax = $request->ajax();
 
-        if ((!$ajax && $request->isMethod("get")) || $request->has('bfg')) {
+        if (
+            (!$ajax && $request->isMethod("get")) ||
+            $request->has('bfg') ||
+            bfgTemplateRequest() ||
+            bfgContentRequest()
+        ) {
 
             if ($tc = $this->checkClass($layout)) {
 
@@ -64,22 +71,27 @@ class LayoutMiddleware
 
                 $origin_content = $response->getContent();
 
-                if ($response->exception)  {
+                ContentController::$content_end = true;
+
+                $layout = static::$current->setContent($origin_content)
+                    ->create_body_scripts()->render();
+
+                if (bfgTemplateRequest()) {
+
+                    $content = app(CallController::class)->index();
+
+                } else if (bfgContentRequest()) {
+
+                    $content = app(ContentController::class)->index($origin_content);
+
+                } else {
+
+                    $content = "<!DOCTYPE html>" . $layout;
+                }
+
+                if ($response->exception || $response instanceof RedirectResponse) {
 
                     return $response;
-                }
-
-                if (static::$current_action) {
-
-                    $controller = app(CallController::class);
-
-                    $content = $controller->index();
-                }
-
-                if (!static::$current_action) {
-
-                    $content = static::$current->setContent($origin_content)
-                        ->create_body_scripts()->render();
                 }
 
                 $response->setContent($content);

@@ -34,9 +34,10 @@ class RouteMixin
 
             $methods = ['GET', 'HEAD'];
 
-            if (request()->ajax() && request()->has('bfg') && request()->get('bfg') == 'true') {
+            //if (request()->ajax() && request()->has('bfg') && request()->get('bfg') == 'true') {
+            if (request()->headers) {
 
-                LayoutMiddleware::$current_action = $action;
+                LayoutMiddleware::$bfg_request = true;
 
                 $methods[] = 'POST';
             }

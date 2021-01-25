@@ -82,9 +82,31 @@ class Tag extends TagCollect implements Renderable {
      * @param $content
      * @return $this
      */
+    public function text(...$content)
+    {
+        array_push($this->c, implode("", $content));
+
+        return $this;
+    }
+
+    /**
+     * @param $content
+     * @return $this
+     */
     public function prepEnd(...$content)
     {
         array_unshift($this->c, ...$content);
+
+        return $this;
+    }
+
+    /**
+     * @param $content
+     * @return $this
+     */
+    public function prepEndText(...$content)
+    {
+        array_unshift($this->c, implode("", $content));
 
         return $this;
     }

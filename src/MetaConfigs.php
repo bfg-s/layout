@@ -2,11 +2,9 @@
 
 namespace Bfg\Layout;
 
-use Lar\Layout\Tags\META;
-
 /**
- * Class LConfigs
- * @package Lar\Layout\Core
+ * Class MetaConfigs
+ * @package Bfg\Layout
  */
 class MetaConfigs {
 
