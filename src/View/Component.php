@@ -2,11 +2,9 @@
 
 namespace Bfg\Layout\View;
 
-use Admin\Components\ServicePages\Login\Form;
-use Bfg\Dev\EmbeddedCall;
+use Bfg\Dev\Support\Behavior\EmbeddedCall;
 use Bfg\Layout\Controllers\ContentController;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\Str;
 use Illuminate\View\ComponentAttributeBag;
 use Bfg\Layout\Middleware\LayoutMiddleware;
 use Illuminate\Contracts\Support\Renderable;
