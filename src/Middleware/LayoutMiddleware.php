@@ -8,6 +8,7 @@ use Bfg\Layout\MainLayout;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 
 /**
@@ -22,11 +23,6 @@ class LayoutMiddleware
     static $current;
 
     /**
-     * @var bool
-     */
-    static $bfg_request = false;
-
-    /**
      * @var array
      */
     static $responces = [];
@@ -36,58 +32,32 @@ class LayoutMiddleware
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
-     * @param  string  $layout
+     * @param  string  $custom_layout
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, $layout = 'default')
+    public function handle(Request $request, Closure $next, $custom_layout = 'default')
     {
         $ajax = $request->ajax();
 
-        if (
-            (!$ajax && $request->isMethod("get")) ||
-            $request->has('bfg') ||
-            bfgTemplateRequest() ||
-            bfgContentRequest()
-        ) {
+        /** @var \Illuminate\Http\Response $response */
+        $response = $next($request);
 
-            if ($tc = $this->checkClass($layout)) {
+        $response->header('X-CSRF-TOKEN', csrf_token());
 
-                $layout = $tc;
-            }
+        if (!$ajax && $request->isMethod("get")) {
 
-            else if (!class_exists($layout)) {
+            $layout = $this->layout_class($custom_layout);
 
-                $layout = "App\\Layouts\\" . ucfirst(Str::camel($layout)) . "Layout";
-            }
+            if ($layout !== false) {
 
-            if (class_exists($layout)) {
-
-                static::$current = app($layout);//new $layout();
-
-                /** @var \Illuminate\Http\Response $response */
-                $response = $next($request);
-
-                $response->header('X-CSRF-TOKEN', csrf_token());
+                static::$current = $layout;
 
                 $origin_content = $response->getContent();
 
                 ContentController::$content_end = true;
 
-                $layout = static::$current->setContent($origin_content)
+                $content = static::$current->setContent($origin_content)
                     ->create_body_scripts()->render();
-
-                if (bfgTemplateRequest()) {
-
-                    $content = app(CallController::class)->index();
-
-                } else if (bfgContentRequest()) {
-
-                    $content = app(ContentController::class)->index($origin_content);
-
-                } else {
-
-                    $content = "<!DOCTYPE html>" . $layout;
-                }
 
                 if ($response->exception || $response instanceof RedirectResponse) {
 
@@ -95,21 +65,46 @@ class LayoutMiddleware
                 }
 
                 $response->setContent($content);
-
-                return $response;
             }
 
             else {
 
-                throw new \Exception("Layout Class [{$layout}] is not exists!");
+                throw new \Exception("Layout Class [{$custom_layout}] is not exists!");
+            }
+
+        } else if ($ajax) {
+
+            $componentContent = ComponentMiddleware::componentRequest($response, $request, $response->getContent());
+
+            if ($componentContent !== false) {
+
+                $response->setContent($componentContent);
             }
         }
 
-        $response = $next($request);
-
-        $response->header('X-CSRF-TOKEN', csrf_token());
-
         return $response;
+    }
+
+    /**
+     * Get current layout class
+     * @param  string  $default
+     * @return mixed
+     */
+    protected function layout_class(string $default): mixed
+    {
+        $layout = false;
+
+        if ($tc = $this->checkClass($default)) {
+
+            $layout = $tc;
+        }
+
+        else if (!class_exists($default)) {
+
+            $layout = "App\\Layouts\\" . ucfirst(Str::camel($default)) . "Layout";
+        }
+
+        return $layout && class_exists($layout) ? app($layout) : false;
     }
 
     /**

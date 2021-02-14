@@ -55,7 +55,7 @@ class ContentController
     {
         if (static::$can === null) {
 
-            static::$can = bfgContentRequest() || bfgTemplateRequest();
+            static::$can = is_bfg_cr() || is_bfg_tr();
         }
 
         if (static::$can && static::$content_end) {

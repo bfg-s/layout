@@ -92,6 +92,12 @@ abstract class MainLayout extends Tag {
     protected $containerId = null;
 
     /**
+     * Join HTML type
+     * @var string
+     */
+    protected $lj = "<!DOCTYPE html>";
+
+    /**
      * MainLayout constructor.
      */
     public function __construct()
@@ -139,7 +145,7 @@ abstract class MainLayout extends Tag {
 
         if (count($respond)) {
 
-            $this->body->script(['data-bfg-call' => '', 'type' => 'json'])->appEnd(
+            $this->body->script(['data-bfg-call' => '', 'type' => 'application/json'])->appEnd(
                 json_encode($respond, JSON_UNESCAPED_UNICODE)
             );
         }

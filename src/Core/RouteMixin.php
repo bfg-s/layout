@@ -32,17 +32,7 @@ class RouteMixin
     {
         return function ($uri, $action = null) {
 
-            $methods = ['GET', 'HEAD'];
-
-            //if (request()->ajax() && request()->has('bfg') && request()->get('bfg') == 'true') {
-            if (request()->headers) {
-
-                LayoutMiddleware::$bfg_request = true;
-
-                $methods[] = 'POST';
-            }
-
-            return $this->addRoute($methods, $uri, $action);
+            return $this->addRoute(['GET', 'HEAD', 'POST'], $uri, $action);
         };
     }
 }

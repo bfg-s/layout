@@ -26,146 +26,58 @@ if (! function_exists('tag')) {
      * @param  mixed  ...$params
      * @return \Bfg\Layout\Tag
      */
-    function tag (string $tag, ...$params) {
+    function tag (string $tag = null, ...$params) {
 
         return new \Bfg\Layout\Tag($tag, ...$params);
     }
 }
 
-if (! function_exists('bfgContentRequest')) {
+if (! function_exists('part')) {
 
     /**
+     * A part maker
+     * @param  string  $component
+     * @param  mixed  ...$params
+     * @return \Bfg\Layout\View\Part
+     */
+    function part (string $component, ...$params) {
+
+        return new \Bfg\Layout\View\Part($component, ...$params);
+    }
+}
+
+if (! function_exists('is_bfg_cr')) {
+
+    /**
+     * Check is have BFG Content Request
      * @return bool
      */
-    function bfgContentRequest () {
+    function is_bfg_cr () {
 
         return request()->headers->get('BFG-CONTENT-REQUEST') == true;
     }
 }
 
-if (! function_exists('bfgTemplateRequest')) {
+if (! function_exists('is_bfg_tr')) {
 
     /**
+     * Check is have BFG Template Request
      * @return bool
      */
-    function bfgTemplateRequest () {
+    function is_bfg_tr () {
 
         return request()->headers->get('BFG-TEMPLATE-REQUEST') == true;
     }
 }
 
-if (! function_exists('__transform_blade_component')) {
-    /**
-     * @param  array  $data
-     * @param  string  $class
-     * @param  string  $id
-     * @param  int|string  $num
-     * @param  bool  $has_parent
-     * @return array
-     */
-    function __transform_blade_component (array $data, string $class, string $id, $num, bool $has_parent = false) {
 
-        $identify = 'data-e'.($has_parent ? "c" : "r");
-
-        $result = [
-            $identify => null
-            //'e' => null, // Element name
-            //'a' => null, // Attributes
-            //'c' => [],   // Contents
-            //'v' => null, // Variables
-            //'m' => [],   // Methods
-        ];
-
-        $content = "";
-
-        if (isset($data['__laravel_slots'])) {
-
-            if (isset($data['__laravel_slots']['__default'])) {
-                $content = $data['__laravel_slots']['__default']->toHtml();
-                unset($data['__laravel_slots']['__default'], $data['slot']);
-            }
-
-            foreach ($data['__laravel_slots'] as $slot_key => $item) {
-                /** @var \Illuminate\Support\HtmlString $item */
-                if ($item) {
-                    //$result['data-c'][$slot_key] = $item->toHtml();
-                    $content .= tag('span', ['data-sf' => $num, 'data-s' => $slot_key])->appEnd($item->toHtml());
-                }
-                unset($data[$slot_key]);
-            }
-
-            unset($data['__laravel_slots']);
-        }
-
-        foreach ($data as $key => $datum) {
-
-            if ($key === 'attributes') {
-                /** @var \Illuminate\View\ComponentAttributeBag $datum */
-                foreach ($datum->getAttributes() as $name => $attribute) {
-                    if ($name == 'class') { $result[$name] = $attribute;}
-                    else { $result['data-a'][$name] = $attribute; }
-                }
-            } else if ($key === 'componentName') {
-                $result[$identify] = $id;
-            } else if ($datum instanceof \Illuminate\View\InvokableComponentVariable) {
-                $result['data-m'][] = $key;
-            } else {
-                if ($key == '_pn') {
-                    if (is_array($datum) && count($datum)) $result['data-v'][$key] = $datum;
-                } else {
-                    $result['data-v'][$key] = $datum;
-                }
-            }
-        }
-
-        if (isset($result['data-m'])) {
-            $result['data-m'] = implode(';', $result['data-m']);
-        }
-
-        return ['schema' => $result, 'content' => $content];
-    }
-}
-
-if (! function_exists('__generate_blade_component_name')) {
-
-    /**
-     * @param  string  $class
-     * @return string|null
-     */
-    function __generate_blade_component_name (string $class) {
-
-        $classComponentNamespaces = app(Illuminate\View\Compilers\BladeCompiler::class)->getClassComponentNamespaces();
-
-        foreach ($classComponentNamespaces as $alias => $classComponentNamespace) {
-
-            if (\Str::is($classComponentNamespace . "*", $class)) {
-
-                $name = implode('.',
-                    array_map('Str::camel',
-                        array_map('Str::snake',
-                            explode('\\',
-                                str_replace("{$classComponentNamespace}\\", '', $class)
-                            )
-                        )
-                    )
-                );
-
-                return "{$alias}::{$name}";
-            }
-        }
-
-        return null;
-    }
-}
-
-
-if (! function_exists('__find_blade_component')) {
+if (! function_exists('blade_component_class')) {
 
     /**
      * @param  string  $name
      * @return string|null
      */
-    function __find_blade_component (string $name) {
+    function blade_component_class (string $name) {
 
         $compiler = app(\Illuminate\View\Compilers\BladeCompiler::class);
 

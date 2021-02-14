@@ -30,6 +30,18 @@ class Tag extends TagCollect implements Renderable {
     protected $c = [];
 
     /**
+     * Left join data
+     * @var string
+     */
+    protected $lj = "";
+
+    /**
+     * Right join data
+     * @var string
+     */
+    protected $rj = "";
+
+    /**
      * Tag constructor.
      * @param  string|null  $e
      * @param  mixed  ...$params
@@ -38,6 +50,17 @@ class Tag extends TagCollect implements Renderable {
     {
         if ($e) $this->e = $e;
         $this->when(...$params);
+    }
+
+    /**
+     * @param  string  $element
+     * @return $this
+     */
+    public function element(string $element)
+    {
+        $this->e = $element;
+
+        return $this;
     }
 
     /**
@@ -141,6 +164,7 @@ class Tag extends TagCollect implements Renderable {
     }
 
     /**
+     * Render a tag component
      * @return string
      */
     public function render()
@@ -155,7 +179,7 @@ class Tag extends TagCollect implements Renderable {
         $attrs = ($has_attrs ? " ":"") . implode(" ", $a);
         $start = "<{$this->e}" . $attrs . ($close ? ">" : "/>");
         $end = $close ? "</{$this->e}>":"";
-        return $start . implode("", $this->c) . $end;
+        return $this->lj . $start . implode("", $this->c) . $end . $this->rj;
     }
 
     /**
@@ -222,6 +246,30 @@ class Tag extends TagCollect implements Renderable {
 
             return  $this->parent;
         }
+
+        return $this;
+    }
+
+    /**
+     * Left join data
+     * @param  string  $data
+     * @return $this
+     */
+    public function leftJoin(string $data)
+    {
+        $this->lj = $data . $this->lj;
+
+        return $this;
+    }
+
+    /**
+     * Right join data
+     * @param  string  $data
+     * @return $this
+     */
+    public function rightJoin(string $data)
+    {
+        $this->rj .= $data;
 
         return $this;
     }

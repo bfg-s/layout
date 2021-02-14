@@ -11,7 +11,8 @@
     ],
     "require": {
         "php": ">=8.0.0",
-        "bfg/dev": "^1.0.0"
+        "bfg/dev": "^1.0.0",
+        "bfg/route": "^1.0.0"
     },
     "require-dev": {
     },

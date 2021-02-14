@@ -38,10 +38,10 @@ class Layout
     /**
      * Register component in glogal container
      * @param  string  $id
-     * @param  Component  $instance
+     * @param  Component|Tag  $instance
      * @return array
      */
-    public function registerComponent(string $id, Component $instance)
+    public function registerComponent(string $id, Component|Tag $instance)
     {
         if (ContentController::$content_end) {
 

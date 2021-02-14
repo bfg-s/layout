@@ -2,13 +2,16 @@
 
 namespace Bfg\Layout\View;
 
-use Bfg\Dev\Support\Behavior\EmbeddedCall;
 use Bfg\Layout\Controllers\ContentController;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\View\ComponentAttributeBag;
 use Bfg\Layout\Middleware\LayoutMiddleware;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\View\Component as BladeComponent;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionProperty;
 
 /**
  * Bfg Class Component
@@ -36,10 +39,10 @@ abstract class Component extends BladeComponent {
     static protected $slotable;
 
     /**
-     * Node name of component tag
+     * Cached name of component
      * @var string
      */
-    protected $element = "div";
+    static protected $nameCache;
 
     /**
      * Parent of current component
@@ -134,11 +137,7 @@ abstract class Component extends BladeComponent {
      */
     public function render()
     {
-        /** Register component and get data */
-        list($name, $num) = \Layout::registerComponent($this->componentName, $this);
-
-        /** Make component ID */
-        $id = $name . "\\" . $num;
+        $part = part($this->componentName);
 
         /** Push on except bfg component methods */
         array_push(
@@ -146,25 +145,9 @@ abstract class Component extends BladeComponent {
             'create', 'attrs', 'attr', 'text', 'slot', 'inner', 'toSlot', 'provoke'
         );
 
-        /** Calling an internal event for feeding content for the api class. */
-        $this->inner();
+        if ($part->called) {
 
-        /** Call request if exists */
-        if (request()->ajax()) {
-
-            $rid = base64_encode($id);
-
-            /** Check on out call */
-            if (request()->has($rid)) {
-
-                LayoutMiddleware::$responces[$id] =
-                    ['response' => EmbeddedCall::make(
-                        [$this, request()->get($rid)], [],
-                        function (\Throwable $throwable) {
-                            dd($throwable);
-                        }
-                    )];
-            }
+            LayoutMiddleware::$responces[$part->id]['response'] = $part->response;
         }
 
         /**
@@ -172,28 +155,12 @@ abstract class Component extends BladeComponent {
          * @param  array  $data
          * @return string
          */
-        return function (array $data) use ($id, $num) {
+        return function (array $data) use ($part) {
 
             /** Return the parent to the current component. */
             Component::$current = $this->tmp_current;
 
-            /** Transform default component data to bfg templater */
-            $roles = __transform_blade_component($data, static::class, $id, $num, !!$this->parent);
-
-            /** Write data variables for response */
-            if (isset(LayoutMiddleware::$responces[$id]) && isset($roles['schema']['data-v'])) {
-
-                LayoutMiddleware::$responces[$id]['schema'] = $roles['schema']['data-v'];
-            }
-
-            /** Add state fot content getter */
-            if (isset($roles['schema']['data-v'])) {
-
-                ContentController::toState($id, $roles['schema']['data-v']);
-            }
-
-            /** Return the component as a tag. */
-            return tag($this->element, $roles['schema'], (string)$roles['content'])->render();
+            return $this->makePart($part, $data);
         };
     }
 
@@ -231,18 +198,18 @@ abstract class Component extends BladeComponent {
     }
 
     /**
-     * Create a callable variable from the given method.
+     * Get the data that should be supplied to the view.
      *
-     * Since we do not have a call through a standard type,
-     * we can remove the restriction of parameters,
-     * since we only determine the type from it.
+     * @author Freek Van der Herten
+     * @author Brent Roose
      *
-     * @param  \ReflectionMethod  $method
-     * @return mixed
+     * @return array
      */
-    protected function createVariableFromMethod(\ReflectionMethod $method)
+    public function data()
     {
-        return $this->createInvokableVariable($method->getName());
+        $this->attributes = $this->attributes ?: new ComponentAttributeBag;
+
+        return array_merge($this->extractPublicProperties(), ['methods' => $this->extractPublicMethods()]);
     }
 
     /**
@@ -299,7 +266,7 @@ abstract class Component extends BladeComponent {
          */
         if (!$component->componentName) {
 
-            $component->withName(__generate_blade_component_name(static::class));
+            $component->withName(static::generateName());
         }
 
         /** Apply inner callback for api class */
@@ -314,6 +281,9 @@ abstract class Component extends BladeComponent {
                 echo $callback;
             }
         }
+
+        /** Calling an internal event for feeding content for the api class. */
+        $component->inner();
 
         /** If the component is called as a child, then immediately render it. */
         if ($component->tmp_current) {
@@ -363,5 +333,158 @@ abstract class Component extends BladeComponent {
     public function __toString()
     {
         return app('view')->renderComponent();
+    }
+
+    public static function generateName(string $class = null)
+    {
+        if (!$class) $class = static::class;
+
+        if ($class::$nameCache) {
+
+            return $class::$nameCache;
+        }
+
+        $classComponentNamespaces = app(BladeCompiler::class)->getClassComponentNamespaces();
+
+        foreach ($classComponentNamespaces as $alias => $classComponentNamespace) {
+
+            if (\Str::is($classComponentNamespace . "*", $class)) {
+
+                $name = implode('.',
+                    array_map('Str::camel',
+                        array_map('Str::snake',
+                            explode('\\',
+                                str_replace("{$classComponentNamespace}\\", '', $class)
+                            )
+                        )
+                    )
+                );
+
+                return $class::$nameCache = "{$alias}::{$name}";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Make and render part component
+     * @param  Part  $part
+     * @param  array  $data
+     * @return string
+     */
+    protected function makePart(Part $part, array $data) {
+
+        $part->root = !$this->parent;
+
+        if (isset($data['__laravel_slots'])) {
+
+            foreach ($data['__laravel_slots'] as $slot_key => $item) {
+
+                $part->slot($item->tohtml(), $slot_key == '__default' ? 'default' : $slot_key);
+            }
+        }
+
+        if (isset($data['attributes'])) {
+
+            if (isset($data['attributes']['class'])) {
+
+                $part->attr('class', $data['attributes']['class']);
+            }
+
+            $part->props($data['attributes']);
+        }
+
+        if (isset($data['methods'])) {
+
+            $part->methods($data['methods']);
+        }
+
+        if (isset($data['props'])) {
+
+            $part->assets($data['props']);
+
+            if ($part->called) {
+
+                LayoutMiddleware::$responces[$part->id]['schema'] = $data['props'];
+
+                ContentController::toState($part->id, $data['props']);
+            }
+        }
+
+        return $part->render();
+    }
+
+    /**
+     * Extract the public properties for the component.
+     *
+     * @return array
+     */
+    protected function extractPublicProperties()
+    {
+        $class = get_class($this);
+
+        if (! isset(static::$propertyCache[$class])) {
+            $reflection = new ReflectionClass($this);
+
+            static::$propertyCache[$class] = collect($reflection->getProperties(ReflectionProperty::IS_PUBLIC))
+                ->reject(function (ReflectionProperty $property) {
+                    return $property->isStatic();
+                })
+                ->reject(function (ReflectionProperty $property) {
+                    return $this->shouldIgnore($property->getName());
+                })
+                ->map(function (ReflectionProperty $property) {
+                    return $property->getName();
+                })->all();
+        }
+
+        $values = [
+            'componentName' => null,
+            'attributes' => null,
+            'props' => []
+        ];
+
+        foreach (static::$propertyCache[$class] as $property) {
+            if ($property == 'componentName') {
+                $values[$property] = $this->{$property};
+            } else if ($property == 'attributes') {
+                $values[$property] = $this->{$property}->getAttributes();
+            } else {
+                $values['props'][$property] = $this->{$property};
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * Extract the public methods for the component.
+     *
+     * @return array
+     */
+    protected function extractPublicMethods()
+    {
+        $class = get_class($this);
+
+        if (! isset(static::$methodCache[$class])) {
+            $reflection = new ReflectionClass($this);
+
+            static::$methodCache[$class] = collect($reflection->getMethods(ReflectionMethod::IS_PUBLIC))
+                ->reject(function (ReflectionMethod $method) {
+                    return $this->shouldIgnore($method->getName());
+                })
+                ->map(function (ReflectionMethod $method) {
+                    return $method->getName();
+                });
+        }
+
+        $values = [];
+
+        foreach (static::$methodCache[$class] as $method) {
+            $values[$method] = [$this, $method];
+        }
+
+        return $values;
     }
 }
