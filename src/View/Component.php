@@ -13,7 +13,8 @@ use Illuminate\View\Component as BladeComponent;
  * Bfg Class Component
  * @package Bfg\Layout\View
  */
-abstract class Component extends BladeComponent {
+abstract class Component extends BladeComponent
+{
 
     /**
      * Provocation attribute
@@ -49,14 +50,14 @@ abstract class Component extends BladeComponent {
     /**
      * Set data to the slot of the current component (for api class)
      * @param  string  $name
-     * @param  \Closure|string $data
+     * @param  \Closure|string  $data
      * @return $this
      */
     public function slot(string $name, $data)
     {
         app('view')->slot($name);
 
-        echo($data instanceof \Closure ? $data() : (string)$data);
+        echo($data instanceof \Closure ? $data() : (string) $data);
 
         app('view')->endSlot();
 
@@ -102,7 +103,7 @@ abstract class Component extends BladeComponent {
          * Check on rendered and echo
          */
         echo $text instanceof Renderable ? $text->render() : (
-            $text instanceof \Closure ? $text() : (string)$text
+        $text instanceof \Closure ? $text() : (string) $text
         );
 
         return $this;
@@ -137,7 +138,7 @@ abstract class Component extends BladeComponent {
          */
         array_push(
             $this->except,
-            'create', 'attrs', 'attr', 'text', 'slot', 'inner', 'toSlot', 'provoke'
+            'create', 'attrs', 'attr', 'text', 'slot', 'inner', 'toSlot', 'provoke', 'generateName'
         );
 
         /**
@@ -149,7 +150,6 @@ abstract class Component extends BladeComponent {
          * Check on out call
          */
         if (request()->has($id)) {
-
             LayoutMiddleware::$responces[$id] =
                 EmbeddedCall::make([$this, request()->get($id)]);
         }
@@ -165,7 +165,6 @@ abstract class Component extends BladeComponent {
          * @return string
          */
         return function (array $data) use ($class, $id) {
-
             /**
              * Return the parent to the current component.
              */
@@ -197,7 +196,6 @@ abstract class Component extends BladeComponent {
             }
 
             if (isset($roles['schema']['a']['class']) || $class) {
-
                 /**
                  * Pass the class to the default node component, if it exists.
                  */
@@ -207,14 +205,16 @@ abstract class Component extends BladeComponent {
             /**
              * Return the component as a tag.
              */
-            return tag($this->element, $attributes, (string)$roles['content'])->render();
+            return tag($this->element, $attributes, (string) $roles['content'])->render();
         };
     }
 
     /**
      * Call inner builder (used for api class)
      */
-    public function inner() {}
+    public function inner()
+    {
+    }
 
     /**
      * Resolve the Blade view or view file that should be used when rendering the component.
@@ -256,18 +256,15 @@ abstract class Component extends BladeComponent {
         /**
          * A trap for parameters
          */
-        if (!is_array($params)) { $callback = $params; $params = []; }
+        if (!is_array($params)) {
+            $callback = $params;
+            $params = [];
+        }
 
         /**
          * Make component instance
          */
         $component = app('view')->getContainer()->make(static::class, $params);
-        //$component = new static(...$params);
-
-        /**
-         * Start a component
-         */
-        app('view')->startComponent($component->resolveView(), $component->data());
 
         /**
          * If the name of the component is not specified
@@ -275,32 +272,32 @@ abstract class Component extends BladeComponent {
          * generate its name based on api class.
          */
         if (!$component->componentName) {
-
-            $component->withName(__generate_blade_component_name(static::class));
-
-            //dd($component->componentName, __generate_blade_component_name(static::class));
+            $component->withName(static::generateName(get_class($component)));
         }
 
-        /**
-         * Apply inner callback for api class
-         */
+        /** Start a component */
+        app('view')->startComponent($component->resolveView(), $component->data());
+
+        /** Apply inner callback for api class */
         if ($callback) {
-
             if ($callback instanceof \Closure) {
-
                 $callback($component);
-
             } else {
-
                 echo $callback;
             }
         }
 
-        /**
-         * If the component is called as a child, then immediately render it.
-         */
-        if ($component->tmp_current) {
+        /** Calling an internal event for feeding content for the api class. */
+        $result = $component->inner();
 
+        if (is_array($result)) {
+            foreach ($result as $item) {
+                $item::create();
+            }
+        }
+
+        /** If the component is called as a child, then immediately render it. */
+        if ($component->tmp_current) {
             echo $component;
 
             return null;
@@ -323,7 +320,6 @@ abstract class Component extends BladeComponent {
          * Throw exception if don't have a parent
          */
         if (!Component::$current) {
-
             throw new \Exception("You can send to the slot only when there is a parent component!");
         }
 
@@ -331,7 +327,6 @@ abstract class Component extends BladeComponent {
          * Make a slot for parent with current component
          */
         return Component::$current->slot($slot, function () use ($params, $callback) {
-
             /**
              * Create current component
              */
@@ -346,5 +341,158 @@ abstract class Component extends BladeComponent {
     public function __toString()
     {
         return app('view')->renderComponent();
+    }
+
+    /**
+     * @param  string|null  $class
+     * @return string|null
+     */
+    public static function generateName(string $class = null)
+    {
+        $classComponentNamespaces = app(BladeCompiler::class)->getClassComponentNamespaces();
+
+        foreach ($classComponentNamespaces as $alias => $classComponentNamespace) {
+            if (\Str::is($classComponentNamespace."*", $class)) {
+                $name = implode('.',
+                    array_map('Str::camel',
+                        array_map('Str::snake',
+                            explode('\\',
+                                str_replace("{$classComponentNamespace}\\", '', $class)
+                            )
+                        )
+                    )
+                );
+
+                return "{$alias}::{$name}";
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Make and render part component
+     * @param  Part  $part
+     * @param  array  $data
+     * @return string
+     */
+    protected function makePart(Part $part, array $data)
+    {
+        $part->root = !$this->parent;
+
+        if (isset($data['__laravel_slots'])) {
+            foreach ($data['__laravel_slots'] as $slot_key => $item) {
+                $part->slot($item->tohtml(), $slot_key == '__default' ? 'default' : $slot_key);
+            }
+        }
+
+        if (isset($data['attributes'])) {
+            if (isset($data['attributes']['class'])) {
+                $part->attr('class', $data['attributes']['class']);
+            }
+
+            $part->props($data['attributes']);
+        }
+
+        if (isset($data['methods'])) {
+            $part->methods($data['methods']);
+        }
+
+        if (isset($data['props'])) {
+            $part->assets($data['props']);
+
+            if ($part->called) {
+                LayoutMiddleware::$responces[$part->id]['schema'] = $data['props'];
+
+                ContentController::toState($part->id, $data['props']);
+            }
+        }
+
+        return $part->render();
+    }
+
+    /**
+     * Extract the public properties for the component.
+     *
+     * @return array
+     */
+    protected function extractPublicProperties()
+    {
+        $class = get_class($this);
+
+        if (!isset(static::$propertyCache[$class])) {
+            $reflection = new ReflectionClass($this);
+
+            static::$propertyCache[$class] = collect($reflection->getProperties(ReflectionProperty::IS_PUBLIC))
+                ->reject(function (ReflectionProperty $property) {
+                    return $property->isStatic();
+                })
+                ->reject(function (ReflectionProperty $property) {
+                    return $this->shouldIgnore($property->getName());
+                })
+                ->map(function (ReflectionProperty $property) {
+                    return $property->getName();
+                })->all();
+        }
+
+        $values = [
+            'componentName' => null,
+            'attributes' => null,
+            'props' => []
+        ];
+
+        foreach (static::$propertyCache[$class] as $property) {
+            if ($property == 'componentName') {
+                $values[$property] = $this->{$property};
+            } else {
+                if ($property == 'attributes') {
+                    $values[$property] = $this->{$property}->getAttributes();
+                } else {
+                    $values['props'][$property] = $this->{$property};
+                }
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * Extract the public methods for the component.
+     *
+     * @return array
+     */
+    protected function extractPublicMethods()
+    {
+        $class = get_class($this);
+
+        if (!isset(static::$methodCache[$class])) {
+            $reflection = new ReflectionClass($this);
+
+            static::$methodCache[$class] = collect($reflection->getMethods(ReflectionMethod::IS_PUBLIC))
+                ->reject(function (ReflectionMethod $method) {
+                    return $this->shouldIgnore($method->getName());
+                })
+                ->map(function (ReflectionMethod $method) {
+                    return $method->getName();
+                });
+        }
+
+        $values = [];
+
+        foreach (static::$methodCache[$class] as $method) {
+            $values[$method] = [$this, $method];
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param  mixed  ...$arguments
+     * @return $this|null
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     */
+    public function __invoke(...$arguments)
+    {
+        return static::create(...$arguments);
     }
 }

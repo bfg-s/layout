@@ -58,7 +58,9 @@ class LayoutMiddleware
 
                 $response->header('X-CSRF-TOKEN', csrf_token());
 
-                $content = static::$current->setContent($response->getContent());
+                $content = static::$current->setContent(
+                    $origin_content
+                )->create_body_scripts()->render();
 
                 if (static::$current_action) {
 

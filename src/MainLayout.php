@@ -8,7 +8,8 @@ use Bfg\Layout\MetaConfigs;
  * Class Layout
  * @package Bfg\Layout\Core
  */
-abstract class MainLayout extends Tag {
+abstract class MainLayout extends Tag
+{
 
     /**
      * @var string
@@ -21,85 +22,143 @@ abstract class MainLayout extends Tag {
     protected $title;
 
     /**
-     * @var Tag
+     * @var Tag|null
      */
-    protected $head;
+    protected ?Tag $head = null;
 
     /**
      * @var array
      */
-    protected $head_params = [];
+    protected array $head_params = [];
 
     /**
      * @var array
      */
-    protected $metas = [];
+    protected array $metas = [];
 
     /**
      * @var array
      */
-    protected $links = [];
+    protected array $links = [];
 
     /**
      * @var array
      */
-    protected $scripts = [];
+    protected array $scripts = [];
 
     /**
      * @var array
      */
-    protected $bscripts = [];
+    protected array $bscripts = [];
 
     /**
      * @var array
      */
-    protected $styles = [];
+    protected array $styles = [];
 
     /**
      * http://htmlbook.ru/html/base
      * @var array
      */
-    protected $base = [];
+    protected array $base = [];
 
     /**
-     * @var Tag
+     * @var Tag|null
      */
-    protected $body;
-
-    /**
-     * @var array
-     */
-    protected $body_params = [];
+    protected ?Tag $body = null;
 
     /**
      * @var array
      */
-    protected $page_data = [];
+    protected array $body_params = [];
 
     /**
-     * Layout constructor.
-     * @param  mixed  ...$params
+     * @var array
      */
-    public function __construct(...$params)
+    protected array $page_data = [];
+
+    /**
+     * Join HTML type
+     * @var string
+     */
+    protected $lj = "<!DOCTYPE html>";
+
+    /**
+     * MainLayout constructor.
+     */
+    public function __construct()
     {
-        parent::__construct(null, $params);
+        parent::__construct(null, []);
+
+        $this->attr('lang', \App::getLocale());
         $this->head = $this->head($this->head_params);
         $this->body = $this->body($this->body_params);
         $this->head->title($this->title ?? config('app.name'));
-        $this->addTagsFrom('links', 'link', $this->head);
-        $this->addTagsFrom('styles', 'link', $this->head);
-        $this->addTagsFrom('scripts', 'script', $this->head);
-        $this->addTagsFrom('metas', 'meta', $this->head);
+
+        $this->makeLinks()
+            ->makeStyles()
+            ->makeScripts()
+            ->makeMetas();
+
+
         foreach (MetaConfigs::get() as $name => $content) {
             $this->head->meta(["http-equiv" => $name, "name" => $name, "content" => $content]);
         }
     }
 
     /**
+     * @return $this
+     */
+    protected function makeLinks(): static
+    {
+        foreach ($this->links as $link) {
+            $this->head->link($link);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function makeStyles(): static
+    {
+        foreach ($this->styles as $style) {
+            $this->set_style($style, $this->head);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function makeScripts(): static
+    {
+        foreach ($this->scripts as $script) {
+            $this->set_script($script, $this->head);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function makeMetas(): static
+    {
+        foreach ($this->metas as $meta) {
+            $this->head->meta($meta);
+        }
+
+        return $this;
+    }
+
+    /**
      * @param $content
      * @return $this
      */
-    public function setContent($content)
+    public function setContent($content): static
     {
         $this->body->appEnd($content);
 
@@ -107,88 +166,27 @@ abstract class MainLayout extends Tag {
     }
 
     /**
-     * @param  string  $key
-     * @param  null  $value
      * @return $this
      */
-    public function addPageData(string $key, $value = null)
+    public function create_body_scripts(): static
     {
-        $this->page_data[$key] = $value;
+        $respond = app(Respond::class)->toArray();
 
-        return $this;
-    }
+        if (count($respond)) {
+            $this->body->script(['data-bfg-call' => '', 'type' => 'application/json'])->appEnd(
+                json_encode($respond, JSON_UNESCAPED_UNICODE)
+            );
+        }
 
-    /**
-     * @return $this
-     */
-    public function create_body_scripts()
-    {
-        $this->addTagsFrom('bscripts', 'script', $this->body);
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function get_page_data()
-    {
-        return $this->page_data;
-    }
-
-    /**
-     * @return $this
-     */
-    public function create_body_data()
-    {
-        if (count($this->page_data)) {
-
-            $this->body->script(['id' => 'bfg-page-json', 'type' => 'json'])
-                ->appEnd(json_encode($this->page_data));
+        foreach ($this->bscripts as $script) {
+            $this->set_script($script, $this->body);
         }
 
         return $this;
     }
 
     /**
-     * @param  string  $from
      * @param $data
-     * @param  string|null  $to
-     * @param  object|null  $subject
-     * @return $this
-     */
-    protected function addTagsFrom (string $from, string $to = null, object $subject = null) {
-        if (!$to) $to = $from;
-        if (!$subject) $subject = $this;
-        foreach ($this->{$from} as $item) {
-            $this->{"set_{$from}"}($item, $to, $subject);
-        }
-        return $this;
-    }
-
-    /**
-     * @param $data
-     * @param  string  $to
-     * @param  object  $subject
-     */
-    protected function set_links($data, string $to, object $subject)
-    {
-        $subject->{$to}($data);
-    }
-
-    /**
-     * @param $data
-     * @param  string  $to
-     * @param  object  $subject
-     */
-    protected function set_metas($data, string $to, object $subject)
-    {
-        $subject->{$to}($data);
-    }
-
-    /**
-     * @param $data
-     * @param  string  $to
      * @param  object  $subject
      */
     protected function set_styles($data, string $to, object $subject)
@@ -197,21 +195,27 @@ abstract class MainLayout extends Tag {
         $tag = $subject->{$to}();
 
         if (is_array($data)) {
-
+            if (isset($data['href']) && !str_contains($data['href'], "://")) {
+                $data['href'] = asset($data['href']);
+            }
+            if (!isset($data['rel'])) {
+                $data['rel'] = 'stylesheet';
+            }
+            if (!isset($data['type'])) {
+                $data['type'] = 'text/css';
+            }
             $tag->attr($data);
-        }
+        } else {
+            if (is_string($data)) {
+                $url = !str_contains($data, "://") ? asset($data) : $data;
 
-        else if (is_string($data)) {
-
-            $url = strpos($data, "://") === false ? asset($data) : $data;
-
-            $tag->attr(['href' => $url, 'rel' => 'stylesheet', 'type' => 'text/css']);
+                $tag->attr(['href' => $url, 'rel' => 'stylesheet', 'type' => 'text/css']);
+            }
         }
     }
 
     /**
      * @param $data
-     * @param  string  $to
      * @param  object  $subject
      */
     protected function set_scripts($data, string $to, object $subject)
@@ -220,25 +224,19 @@ abstract class MainLayout extends Tag {
         $tag = $subject->{$to}();
 
         if (is_array($data)) {
-
+            if (isset($data['src']) && !str_contains($data['src'], "://")) {
+                $data['src'] = asset($data['src']);
+            }
+            if (!isset($data['type'])) {
+                $data['type'] = 'text/javascript';
+            }
             $tag->attr($data);
+        } else {
+            if (is_string($data)) {
+                $url = !str_contains($data, "://") ? asset($data) : $data;
+
+                $tag->attr(['src' => $url, 'type' => 'text/javascript']);
+            }
         }
-
-        else if (is_string($data)) {
-
-            $url = strpos($data, "://") === false ? asset($data) : $data;
-
-            $tag->attr(['src' => $url, 'type' => 'text/javascript']);
-        }
-    }
-
-    /**
-     * @param $data
-     * @param  string  $to
-     * @param  object  $subject
-     */
-    protected function set_bscripts($data, string $to, object $subject)
-    {
-        $this->set_scripts($data, $to, $subject);
     }
 }
